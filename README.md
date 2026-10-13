@@ -11,9 +11,9 @@
 
 ## 📌 Executive Summary
 
-This repository contains the Verilog RTL implementation, testbench verification, and dual synthesis flow (ASIC + FPGA) for a **5-Tap Separable 2D FIR Digital Differentiator Accelerator** designed for real-time image edge detection in computer vision and ADAS applications.
+This repository contains the complete Verilog RTL implementation, testbench verification, and dual synthesis flow (ASIC + FPGA) for a **5-Tap Separable 2D FIR Digital Differentiator Accelerator** designed for real-time image edge detection in computer vision, robotics, and Advanced Driver Assistance Systems (ADAS).
 
-The digital differentiator highlights high-frequency spatial transitions (edges) by approximating first-order derivatives. To evaluate hardware trade-offs, two architecture variants were realized and synthesized:
+The digital differentiator highlights high-frequency spatial transitions (edges) by approximating first-order derivatives. To evaluate real-world silicon trade-offs, two architecture variants were realized and synthesized:
 1. **Pipelined Architecture (`fir_2d_edge_pipeline.v`)**: A 3-stage fine-grained pipeline achieving a high throughput of **1 output pixel per clock cycle**.
 2. **Non-Pipelined Architecture (`fir_2d_edge_nopipeline.v`)**: A single-cycle combinational datapath optimized for minimal area footprint.
 
@@ -25,11 +25,11 @@ The digital differentiator highlights high-frequency spatial transitions (edges)
 - **Faculty Guide:** Dr. REENA MONICA P
 - **Department:** Department of SENSE, VIT Chennai
 - **Team FIR Members:**
+  - **Vinayak Salunke** (23BVD1062) — RTL Design & Synthesis Flow
   - **A Sanjay** (23BVD1012)
   - **Subham Prasad Gupta** (23BVD1039)
   - **Jairus Solomon** (23BVD1040)
   - **Akhil Kumar** (23BVD1042)
-  - **Vinayak Salunke** (23BVD1062)
 
 ---
 
@@ -56,6 +56,14 @@ $$|G(i, j)| = \min\Big(|G_x(i, j)| + |G_y(i, j)|, \, 255\Big)$$
 ---
 
 ## 🏗️ Hardware Architecture & Datapath
+
+<p align="center">
+  <img width="95%" alt="Top-Level 2D FIR Differentiator Architecture" src="https://github.com/user-attachments/assets/21a8be7a-fd2b-4837-8cde-02be8cdcaec9" />
+</p>
+
+<p align="center">
+  <img width="95%" alt="1D FIR Pipelined Datapath" src="https://github.com/user-attachments/assets/07096205-98f7-4d76-9ffe-33b2efb14eae" />
+</p>
 
 ```
                        ┌──────────────────────────────┐
@@ -88,38 +96,83 @@ $$|G(i, j)| = \min\Big(|G_x(i, j)| + |G_y(i, j)|, \, 255\Big)$$
 
 ---
 
-## 📊 Synthesis & PPA Benchmarks
+## 📊 ASIC Synthesis & PPA Trade-Off Analysis (GPDK 180nm)
 
-### 1. ASIC Synthesis — Cadence Genus 21.14 (GPDK 180nm)
-Target Clock Frequency: **100 MHz** (10 ns period) | Operating Condition: **Slow Corner**
+Both designs were synthesized targeting the **GPDK 180nm standard-cell library** using **Cadence Genus 21.14** at a 100 MHz target clock frequency (10 ns period) under Slow Corner operating conditions.
 
-| Metric | Pipelined (3-Stage) | Non-Pipelined | Impact / Trade-off |
+| Metric | Pipelined (3-Stage) | Non-Pipelined (Combinational) | Trade-Off Impact |
 | :--- | :---: | :---: | :--- |
 | **Cell Count** | **407 cells** | 204 cells | $\uparrow 2.0 \times$ register overhead |
-| **Cell Area** | **13,601.65 $\mu m^2$** | 6,243.65 $\mu m^2$ | $\uparrow 2.18 \times$ area |
-| **Data Path Delay** | **4,489 ps** | 4,672 ps | **4% shorter critical path** |
-| **Setup Slack** | **+5,220 ps (MET)** | +4,362 ps (MET) | Timing met comfortably |
-| **Total Power** | **1.297 mW** | 0.607 mW | $\uparrow 2.14 \times$ dynamic power |
+| **Cell Area** | **13,601.65 $\mu m^2$** | 6,243.65 $\mu m^2$ | $2.18\times$ Area Overhead |
+| **Total Power** | **1.297 mW** | 0.607 mW | $2.14\times$ Power Overhead |
 | ├── *Register Power* | 898.1 $\mu W$ (69.3%) | 434.1 $\mu W$ (71.5%) | Flip-flop clocking dominant |
 | ├── *Logic Power* | 307.4 $\mu W$ (23.7%) | 131.8 $\mu W$ (21.7%) | Combinational gates |
 | ├── *Clock Power* | 91.3 $\mu W$ (7.0%) | 41.2 $\mu W$ (6.8%) | Tree distribution |
 | └── *Leakage Power*| 467.6 nW | 198.9 nW | Static dissipation |
-| **Throughput** | **1 pixel / cycle** | Variable | Essential for real-time video |
+| **Critical Path** | **4,489 ps** | 4,672 ps | **4% shorter critical path** |
+| **Setup Slack** | **+5,220 ps (MET)** | +4,362 ps (MET) | Both easily met 100 MHz target |
+| **Throughput** | **1 pixel / cycle** | Variable | **Essential for real-time video** |
+
+### Cadence Genus Schematic Views
+
+#### 1. Pipelined Architecture Schematic
+<p align="center">
+  <img width="95%" alt="Cadence Genus Synthesis - Pipelined Architecture" src="https://github.com/user-attachments/assets/952ff72c-8c42-4c49-a6e3-99c9a7db1c8e" />
+</p>
+
+#### 2. Non-Pipelined Architecture Schematic
+<p align="center">
+  <img width="95%" alt="Cadence Genus Synthesis - Non-Pipelined Architecture" src="https://github.com/user-attachments/assets/4f3ecab8-29cc-4303-9208-47577ed04edf" />
+</p>
 
 ---
 
-### 2. FPGA Synthesis & Implementation — Xilinx Vivado 2024.2
-Target Device: **Xilinx Kintex-7 (`xc7k70tfbv676-1`)**
+## 📟 FPGA Implementation (Xilinx Kintex-7)
 
-| Metric | Vivado Result | Note |
-| :--- | :---: | :--- |
-| **Status** | **Implementation Complete** | 0 Failed Routes |
-| **Leaf Cells** | **30** | Compact Kintex-7 footprint |
-| **Nets / IO Ports** | **51 / 20** | 8-bit in, 8-bit out + control |
-| **Total On-Chip Power** | **7.095 W** | Vectorless estimation |
-| ├── *Dynamic Power* | **6.997 W (99%)** | I/O dominant (5.985 W) |
-| └── *Device Static* | **0.098 W (1%)** | Base static draw |
-| **Junction Temp.** | **38.4 °C** | **46.6 °C thermal margin** |
+The pipelined design was fully implemented on a **Xilinx Kintex-7 (`xc7k70tfbv676-1`)** device using **Vivado 2024.2**:
+- **Routing Closure:** Achieved 0 failed routes during the `route_design` phase.
+- **Resource Utilization:** 30 Leaf Cells, 51 Nets, 20 IO ports.
+- **Total On-Chip Power:** Estimated at **7.095 W** (Dynamic: 6.997 W heavily driven by I/O termination; Device Static: 0.098 W).
+- **Thermal Margin:** Junction temperature measured at **38.4 °C** (46.6 °C safe thermal headroom).
+
+<p align="center">
+  <img width="95%" alt="Vivado Kintex-7 Device Implementation Layout" src="https://github.com/user-attachments/assets/ad2dacd7-e963-49a4-8176-4aee17d4b80d" />
+</p>
+
+<p align="center">
+  <img width="95%" alt="Vivado Power and Timing Utilization Reports" src="https://github.com/user-attachments/assets/a114e8cc-a1e3-407f-8b2d-66ef992813b9" />
+</p>
+
+---
+
+## 🧪 Functional Verification & Simulation
+
+Functional correctness, pipeline latency, and saturation arithmetic were thoroughly verified using self-checking Verilog testbenches across 4 distinct spatial scenarios:
+1. **Flat Region Test (Uniform Intensity):** Constant pixel input of `100` $\rightarrow$ Confirmed `edge_out = 0`.
+2. **Step Edge Test (0 $\rightarrow$ 200):** Sharp intensity transition $\rightarrow$ Immediate derivative detection and magnitude scaling.
+3. **Ramp Signal Test (0, 10, 20, ..., 90):** Linear intensity variation $\rightarrow$ Stable constant derivative in steady state.
+4. **Impulse Test (Value 8 at $n=0$):** Verified the exact impulse response profile of the $[-1, -2, 0, 2, 1]$ kernel.
+
+<p align="center">
+  <img width="95%" alt="GTKWave Waveform Verification" src="https://github.com/user-attachments/assets/30e8a0e6-72a9-473d-8989-775b414ae336" />
+</p>
+
+---
+
+## 🚀 How to Run Local Simulation
+
+You can simulate the design using [Icarus Verilog](http://iverilog.icarus.com/) and view the execution waveforms in [GTKWave](http://gtkwave.sourceforge.net/):
+
+```bash
+# 1. Compile the pipelined design and testbench
+iverilog -o sim.vvp fir_1d_pipeline.v fir_2d_edge_pipeline.v tb_fir_2d_edge_pipeline.v
+
+# 2. Execute the simulation and dump VCD
+vvp sim.vvp
+
+# 3. View the simulation waveform
+gtkwave tb_fir_2d_edge_pipeline.vcd
+```
 
 ---
 
@@ -127,45 +180,14 @@ Target Device: **Xilinx Kintex-7 (`xc7k70tfbv676-1`)**
 
 ```
 .
-├── README.md                     # Project Documentation & Synthesis Report
-├── fir_1d_nopipeline.v           # 1D FIR Differentiator (Combinational)
+├── README.md                     # Comprehensive Architecture & Synthesis Report
+├── fir_1d_nopipeline.v           # 1D FIR Differentiator (Combinational Datapath)
 ├── fir_1d_pipeline.v             # 1D FIR Differentiator (3-Stage Pipelined)
 ├── fir_2d_edge_nopipeline.v      # Top-Level 2D Edge Detector (Non-Pipelined)
 ├── fir_2d_edge_pipeline.v        # Top-Level 2D Edge Detector (Pipelined)
-├── tb_fir_2d_edge_pipeline.v     # Verilog Testbench with Automated Test Vectors
+├── tb_fir_2d_edge_pipeline.v     # Self-Checking Verilog Testbench
 └── tb_fir_2d_edge_pipeline.vcd   # VCD Waveform Trace File
 ```
-
----
-
-## 🚀 How to Run Local Simulation
-
-You can simulate the design using [Icarus Verilog](http://iverilog.icarus.com/) and view the execution waveforms in [GTKWave](http://gtkwave.sourceforge.net/).
-
-### Step 1: Compile the Verilog RTL & Testbench
-```bash
-iverilog -o sim.vvp fir_1d_pipeline.v fir_2d_edge_pipeline.v tb_fir_2d_edge_pipeline.v
-```
-
-### Step 2: Run Simulation & Generate VCD
-```bash
-vvp sim.vvp
-```
-
-### Step 3: View Simulation Waveform
-```bash
-gtkwave tb_fir_2d_edge_pipeline.vcd
-```
-
----
-
-## 🧪 Testbench Verification Scenarios
-
-The testbench (`tb_fir_2d_edge_pipeline.v`) evaluates 4 critical functional test cases:
-1. **Flat Region Test (Uniform Intensity):** Feeds pixels with constant value `100`. Expects `edge_out = 0`.
-2. **Step Edge Test (0 $\rightarrow$ 200):** Simulates a sharp intensity transition. Confirms immediate derivative detection and magnitude scaling.
-3. **Ramp Signal Test (0, 10, 20, ..., 90):** Verifies constant derivative output in steady state.
-4. **Impulse Test (Value 8 at $n=0$):** Verifies the discrete impulse response profile of the $[-1, -2, 0, 2, 1]$ kernel.
 
 ---
 
